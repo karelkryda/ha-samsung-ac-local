@@ -603,8 +603,16 @@ class SamsungACClient:
         payload = None
         marker = data.find(b"\xff")
         if marker != -1:
+            raw = data[marker + 1 :]
             with contextlib.suppress(cbor2.CBORDecodeError, ValueError):
-                payload = cbor2.loads(data[marker + 1 :])
+                payload = cbor2.loads(raw)
+
+            if payload is not None and not isinstance(payload, dict):
+                LOGGER.debug(
+                    "Non-dict CBOR response (type=%s, raw=%s)",
+                    type(payload).__name__,
+                    raw[:64].hex(),
+                )
 
         return code, payload
 
@@ -643,12 +651,29 @@ class SamsungACClient:
 
     def _receive_response(self) -> tuple[str, dict | None]:
         """Wait for a CoAP response within the retry/timeout budget."""
+        expected_token = self._mid & 0xFF
+        # CoAP header is 4 bytes + 1 byte token (TKL=1)
+        token_offset = 4
+        min_response_len = token_offset + 1
+
         for _ in range(self._max_retries):
             ready, _, _ = select.select([self._active_sock], [], [], self._recv_timeout)
             if not ready:
                 continue
 
             data = self._active_conn.recv(4096)
+
+            # Validate token matches our request
+            if len(data) < min_response_len or data[token_offset] != expected_token:
+                LOGGER.debug(
+                    "Discarding mismatched response (expected token %02x, got %s)",
+                    expected_token,
+                    data[token_offset : token_offset + 1].hex()
+                    if len(data) > token_offset
+                    else "short",
+                )
+                continue
+
             return self._parse_response(data)
 
         msg = f"No response after {self._max_retries} attempts"
