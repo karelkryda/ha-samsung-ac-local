@@ -1,25 +1,31 @@
-"""Custom types for samsung_ac_local."""
+"""
+Runtime data types for the Samsung AC Local integration.
 
-from __future__ import annotations
+Defines the typed ConfigEntry alias and the runtime data structure
+stored in ``entry.runtime_data`` during the config entry lifecycle.
+"""
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.loader import Integration
 
-    from .api import IntegrationBlueprintApiClient
-    from .coordinator import BlueprintDataUpdateCoordinator
+    from .api import DeviceInfo, SamsungACClient
+    from .coordinator import SamsungACCoordinator
 
-
-type IntegrationBlueprintConfigEntry = ConfigEntry[IntegrationBlueprintData]
+type SamsungACConfigEntry = ConfigEntry[SamsungACData]
 
 
 @dataclass
-class IntegrationBlueprintData:
-    """Data for the Blueprint integration."""
+class SamsungACData:
+    """
+    Runtime data for a Samsung AC config entry.
 
-    client: IntegrationBlueprintApiClient
-    coordinator: BlueprintDataUpdateCoordinator
-    integration: Integration
+    Created during entry setup and available via ``entry.runtime_data``.
+    Cleaned up automatically on unload.
+    """
+
+    client: SamsungACClient
+    coordinator: SamsungACCoordinator
+    device_info: DeviceInfo

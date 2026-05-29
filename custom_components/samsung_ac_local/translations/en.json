@@ -1,21 +1,105 @@
 {
-    "config": {
-        "step": {
-            "user": {
-                "description": "If you need help with the configuration have a look here: {documentation_url}",
-                "data": {
-                    "username": "Username",
-                    "password": "Password"
-                }
-            }
-        },
-        "error": {
-            "auth": "Username/Password is wrong.",
-            "connection": "Unable to connect to the server.",
-            "unknown": "Unknown error occurred."
-        },
-        "abort": {
-            "already_configured": "This entry is already configured."
+  "config": {
+    "step": {
+      "user": {
+        "title": "Samsung AC Local",
+        "description": "Set up local control of your Samsung air conditioner via DTLS/CoAP.",
+        "data": {
+          "host": "AC IP address",
+          "cert_path": "Client certificate path",
+          "key_path": "Client key path"
         }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the AC. Check the IP address and that the AC is on the network.",
+      "cert_not_found": "Certificate file not found at the specified path.",
+      "key_not_found": "Key file not found at the specified path.",
+      "cert_read_error": "Failed to read the certificate or key file."
+    },
+    "abort": {
+      "already_configured": "This AC is already configured."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Samsung AC Local Options",
+        "data": {
+          "poll_interval": "Polling interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "outdoor_temperature": {
+        "name": "Outdoor temperature"
+      },
+      "energy": {
+        "name": "Energy consumption"
+      },
+      "filter_usage": {
+        "name": "Filter usage"
+      },
+      "rssi": {
+        "name": "WiFi signal"
+      },
+      "duration_on": {
+        "name": "Running time"
+      },
+      "auto_clean_progress": {
+        "name": "Auto clean progress"
+      },
+      "filter_capacity": {
+        "name": "Filter capacity"
+      },
+      "filter_status": {
+        "name": "Filter status"
+      },
+      "sleep_timer": {
+        "name": "Sleep timer"
+      },
+      "ai_temperature": {
+        "name": "AI temperature"
+      },
+      "operation_count": {
+        "name": "Operation count"
+      },
+      "ai_sleep_elapsed": {
+        "name": "AI sleep elapsed"
+      }
+    },
+    "switch": {
+      "display_light": {
+        "name": "Display light"
+      },
+      "beep": {
+        "name": "Beep"
+      },
+      "air_purify": {
+        "name": "Air purify"
+      },
+      "auto_clean": {
+        "name": "Auto clean"
+      }
+    },
+    "binary_sensor": {
+      "cloud_connected": {
+        "name": "Cloud connected"
+      },
+      "auto_clean_active": {
+        "name": "Auto clean active"
+      },
+      "outdoor_connected": {
+        "name": "Outdoor unit connected"
+      },
+      "ai_sleep_active": {
+        "name": "AI sleep active"
+      },
+      "mute_once": {
+        "name": "Mute once"
+      }
+    }
+  }
 }

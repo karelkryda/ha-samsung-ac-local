@@ -1,32 +1,65 @@
-"""DataUpdateCoordinator for samsung_ac_local."""
+"""
+DataUpdateCoordinator for the Samsung AC Local integration.
 
-from __future__ import annotations
+Wraps the blocking SamsungACClient.get_status() call in an executor job
+and provides the ACStatus dataclass to all subscribed entities.
+"""
 
-from typing import TYPE_CHECKING, Any
+from datetime import timedelta
+from typing import TYPE_CHECKING
 
-from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
-    IntegrationBlueprintApiClientAuthenticationError,
-    IntegrationBlueprintApiClientError,
+    ACStatus,
+    SamsungACClient,
+    SamsungACConnectionError,
+    SamsungACRequestError,
 )
+from .const import LOGGER
 
 if TYPE_CHECKING:
-    from .data import IntegrationBlueprintConfigEntry
+    from homeassistant.core import HomeAssistant
+
+DEFAULT_POLL_INTERVAL = 30
 
 
-# https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
-class BlueprintDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from the API."""
+class SamsungACCoordinator(DataUpdateCoordinator[ACStatus]):
+    """
+    Coordinator for Samsung AC status polling.
 
-    config_entry: IntegrationBlueprintConfigEntry
+    Calls the blocking DTLS/CoAP client in an executor thread and
+    distributes the resulting ACStatus to all entities.
+    """
 
-    async def _async_update_data(self) -> Any:
-        """Update data via library."""
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        client: SamsungACClient,
+        poll_interval: int = DEFAULT_POLL_INTERVAL,
+    ) -> None:
+        """
+        Initialize the coordinator.
+
+        Args:
+            hass: Home Assistant instance.
+            client: Connected SamsungACClient instance.
+            poll_interval: Polling interval in seconds.
+
+        """
+        super().__init__(
+            hass,
+            LOGGER,
+            name=f"Samsung AC ({client.host})",
+            update_interval=timedelta(seconds=poll_interval),
+            always_update=False,
+        )
+        self.client = client
+
+    async def _async_update_data(self) -> ACStatus:
+        """Fetch AC status via the blocking DTLS client."""
         try:
-            return await self.config_entry.runtime_data.client.async_get_data()
-        except IntegrationBlueprintApiClientAuthenticationError as exception:
-            raise ConfigEntryAuthFailed(exception) from exception
-        except IntegrationBlueprintApiClientError as exception:
-            raise UpdateFailed(exception) from exception
+            return await self.hass.async_add_executor_job(self.client.get_status)
+        except (SamsungACConnectionError, SamsungACRequestError) as err:
+            msg = f"Error communicating with AC: {err}"
+            raise UpdateFailed(msg) from err

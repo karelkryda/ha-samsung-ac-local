@@ -1,46 +1,69 @@
-# Notice
+# Samsung AC Local
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
+[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
 
-HAVE FUN! 😎
+Local control of Samsung OCF air conditioners via DTLS/CoAP - no cloud, no SmartThings dependency.
 
-## Why?
+## Features
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
+- Direct local communication over DTLS (encrypted UDP)
+- Persistent connection with ~50ms command latency
+- Full climate entity (HVAC modes, temperature, fan, swing, presets)
+- WindFree, Sleep, Quiet, Smart, Speed, DryComfort preset modes
+- Sensors: outdoor temperature, energy consumption, filter usage, WiFi RSSI
+- Switches: display light, beep, air purify, auto-clean
+- Binary sensors: cloud connection status, auto-clean activity
 
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+## Requirements
 
-## What?
+- Samsung OCF air conditioner (WindFree, AR series, etc.) paired with SmartThings
+- Client certificate with ACL access on the AC (see [Setup guide](#setup-guide))
+- AC on the same local network as Home Assistant
 
-This repository contains multiple files, here is a overview:
+## Installation
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/samsung_ac_local/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements.txt` | Python packages used for development/lint/testing this integration. | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+### HACS (recommended)
 
-## How?
+1. Add this repository as a custom repository in HACS
+2. Install "Samsung AC Local"
+3. Restart Home Assistant
 
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `Integration Blueprint` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
+### Manual
 
-## Next steps
+Copy `custom_components/samsung_ac_local` to your HA `config/custom_components/` directory.
 
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon).
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+## Setup guide
+
+### Certificate preparation
+
+The AC accepts any self-signed certificate that contains a UUID matching its ACL. After normal SmartThings pairing, the Samsung cloud server UUID has full access:
+
+```bash
+openssl req -new -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+    -keyout client_key.pem -out client_cert.pem -days 3650 -nodes \
+    -subj "/OU=uuid:ab0b0ac4-aae9-4958-a04d-8ec36fe1b2f9/CN=local"
+```
+
+Place the files in `/config/samsung_ac/` on your HA instance:
+
+- `/config/samsung_ac/client_cert.pem`
+- `/config/samsung_ac/client_key.pem`
+
+### Configuration
+
+1. Go to Settings > Devices & Services > Add Integration
+2. Search for "Samsung AC Local"
+3. Enter the AC's IP address and certificate file paths
+4. The integration will test the connection during setup
+
+### Options
+
+- **Polling interval** (default 30s): configurable via integration options after setup
+
+## Supported models
+
+Tested on Samsung WindFree 2 (AR70F09C1AWNEU). Should work with any Samsung OCF air conditioner that uses DTLS/CoAP on port 49154 after SmartThings pairing.
+
+## Credits
+
+Built on reverse-engineering research of the Samsung OCF protocol, including BLE pairing flow capture, Frida hooking of SmartThings APK, and IoTivity protocol analysis.

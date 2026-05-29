@@ -1,61 +1,70 @@
-# Contribution guidelines
+# Contributing to Samsung AC Local
 
-Contributing to this project should be as easy and transparent as possible, whether it's:
+## Development setup
 
-- Reporting a bug
-- Discussing the current state of the code
-- Submitting a fix
-- Proposing new features
+1. Clone the repository
+2. Open in VS Code with the Dev Containers extension
+3. The container will install all dependencies automatically via `scripts/setup`
+4. Run `scripts/develop` to start Home Assistant with the integration loaded
 
-## Github is used for everything
+## Code standards
 
-Github is used to host code, to track issues and feature requests, as well as accept pull requests.
+- All code must pass `ruff check` with the project's strict ALL config
+- All code must pass `ruff format`
+- Python 3.14+ (no `from __future__ import annotations`)
+- Docstrings on all public classes and methods
+- Type annotations on all function signatures
 
-Pull requests are the best way to propose changes to the codebase.
+## Project structure
 
-1. Fork the repo and create your branch from `main`.
-2. If you've changed something, update the documentation.
-3. Make sure your code lints (using `scripts/lint`).
-4. Test you contribution.
-5. Issue that pull request!
+```
+custom_components/samsung_ac_local/
+  __init__.py       - Integration setup and teardown
+  api.py            - DTLS/CoAP client (blocking, thread-safe)
+  config_flow.py    - UI configuration flow
+  const.py          - Constants, enums, resource paths
+  coordinator.py    - DataUpdateCoordinator for polling
+  data.py           - Runtime data types
+  climate.py        - Climate entity
+  sensor.py         - Sensor entities
+  switch.py         - Switch entities
+  binary_sensor.py  - Binary sensor entities
+  manifest.json     - Integration manifest
+  translations/     - UI strings
+```
 
-## Any contributions you make will be under the MIT Software License
+## Testing the client
 
-In short, when you submit code changes, your submissions are understood to be under the same [MIT License](http://choosealicense.com/licenses/mit/) that covers the project. Feel free to contact the maintainers if that's a concern.
+You can test the DTLS client against a live AC without running HA:
 
-## Report bugs using Github's [issues](../../issues)
+```python
+import importlib.util
+import sys
+from pathlib import Path
 
-GitHub issues are used to track public bugs.
-Report a bug by [opening a new issue](../../issues/new/choose); it's that easy!
+# Load api module directly (avoids HA dependency in __init__.py)
+for module_name, file_name in [("samsung_ac_local.const", "const.py"), ("samsung_ac_local.api", "api.py")]:
+    spec = importlib.util.spec_from_file_location(module_name, f"custom_components/samsung_ac_local/{file_name}")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = mod
+    spec.loader.exec_module(mod)
 
-## Write bug reports with detail, background, and sample code
+from samsung_ac_local.api import SamsungACClient
 
-**Great Bug Reports** tend to have:
+client = SamsungACClient(
+    "192.168.x.x",
+    Path("path/to/client_cert.pem").read_text(),
+    Path("path/to/client_key.pem").read_text(),
+)
+client.connect()
+print(client.get_status())
+client.disconnect()
+```
 
-- A quick summary and/or background
-- Steps to reproduce
-  - Be specific!
-  - Give sample code if you can.
-- What you expected would happen
-- What actually happens
-- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
+## Reporting issues
 
-People *love* thorough bug reports. I'm not even kidding.
+Please include:
 
-## Use a Consistent Coding Style
-
-Use [black](https://github.com/ambv/black) to make sure the code follows the style.
-
-## Test your code modification
-
-This custom component is based on [integration_blueprint template](https://github.com/ludeeus/integration_blueprint).
-
-It comes with development environment in a container, easy to launch
-if you use Visual Studio Code. With this container you will have a stand alone
-Home Assistant instance running and already configured with the included
-[`configuration.yaml`](./config/configuration.yaml)
-file.
-
-## License
-
-By contributing, you agree that your contributions will be licensed under its MIT License.
+- Your AC model
+- Home Assistant version
+- Relevant log entries (enable debug logging for `custom_components.samsung_ac_local`)
