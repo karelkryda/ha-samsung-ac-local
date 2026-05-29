@@ -25,6 +25,8 @@ from .const import (
     COAP_FORMAT_CBOR,
     COAP_GET,
     COAP_OPTION_EXT_THRESHOLD,
+    COAP_OPTION_EXT_TWO_BYTE,
+    COAP_PAYLOAD_MARKER,
     COAP_POST,
     DTLS_PORT,
     FAN_INDEX_TO_MODE,
@@ -601,9 +603,9 @@ class SamsungACClient:
         """Extract the response code and optional CBOR payload."""
         code = f"{(data[1] >> 5) & 7}.{data[1] & 0x1F:02d}"
         payload = None
-        marker = data.find(b"\xff")
-        if marker != -1:
-            raw = data[marker + 1 :]
+        payload_start = self._find_payload_offset(data)
+        if payload_start is not None:
+            raw = data[payload_start:]
             with contextlib.suppress(cbor2.CBORDecodeError, ValueError):
                 payload = cbor2.loads(raw)
 
@@ -615,6 +617,48 @@ class SamsungACClient:
                 )
 
         return code, payload
+
+    @staticmethod
+    def _find_payload_offset(data: bytes) -> int | None:
+        """
+        Walk CoAP options to find the payload start position.
+
+        Returns the byte offset of the payload (after the 0xFF marker),
+        or None if there is no payload.
+        """
+        # Header (4 bytes) + token (TKL from header byte 0)
+        tkl = data[0] & 0x0F
+        pos = 4 + tkl
+        while pos < len(data):
+            # 0xFF marks the payload boundary
+            if data[pos] == COAP_PAYLOAD_MARKER:
+                return pos + 1
+
+            # Parse option delta and length from first byte
+            delta = (data[pos] >> 4) & 0x0F
+            length = data[pos] & 0x0F
+            pos += 1
+
+            # Extended delta
+            if delta == COAP_OPTION_EXT_THRESHOLD:
+                delta = data[pos] + COAP_OPTION_EXT_THRESHOLD
+                pos += 1
+            elif delta == COAP_OPTION_EXT_TWO_BYTE:
+                delta = int.from_bytes(data[pos : pos + 2]) + 269
+                pos += 2
+
+            # Extended length
+            if length == COAP_OPTION_EXT_THRESHOLD:
+                length = data[pos] + COAP_OPTION_EXT_THRESHOLD
+                pos += 1
+            elif length == COAP_OPTION_EXT_TWO_BYTE:
+                length = int.from_bytes(data[pos : pos + 2]) + 269
+                pos += 2
+
+            # Skip option value
+            pos += length
+
+        return None
 
     def _request_locked(
         self,

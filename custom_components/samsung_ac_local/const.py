@@ -30,6 +30,10 @@ COAP_FORMAT_CBOR = 60
 
 # CoAP option delta/length extension threshold (RFC 7252 section 3.1)
 COAP_OPTION_EXT_THRESHOLD = 13
+COAP_OPTION_EXT_TWO_BYTE = 14
+
+# CoAP payload marker byte (separates options from payload)
+COAP_PAYLOAD_MARKER = 0xFF
 
 
 class Resource(StrEnum):
