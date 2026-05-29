@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for integration_blueprint."""
+"""DataUpdateCoordinator for samsung_ac_local."""
 
 from __future__ import annotations
 

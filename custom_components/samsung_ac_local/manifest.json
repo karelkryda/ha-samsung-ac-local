@@ -1,0 +1,13 @@
+{
+  "domain": "samsung_ac_local",
+  "name": "Samsung AC Local",
+  "codeowners": [
+    "@karelkryda"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/karelkryda/ha-samsung-ac-local",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/karelkryda/ha-samsung-ac-local/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
