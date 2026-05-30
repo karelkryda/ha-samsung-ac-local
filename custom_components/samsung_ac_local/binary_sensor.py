@@ -50,6 +50,7 @@ BINARY_SENSORS: tuple[BinarySensorEntityDescription, ...] = (
         key="mute_once",
         translation_key="mute_once",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:volume-mute",
     ),
 )
 

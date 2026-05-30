@@ -38,6 +38,7 @@ SWITCHES: tuple[SamsungACSwitchDescription, ...] = (
         on_value=LightMode.ON,
         off_value=LightMode.OFF,
         entity_category=EntityCategory.CONFIG,
+        icon="mdi:lightbulb",
     ),
     SamsungACSwitchDescription(
         key="beep",
@@ -46,6 +47,7 @@ SWITCHES: tuple[SamsungACSwitchDescription, ...] = (
         on_value=BeepVolume.ON,
         off_value=BeepVolume.OFF,
         entity_category=EntityCategory.CONFIG,
+        icon="mdi:volume-high",
     ),
     SamsungACSwitchDescription(
         key="air_purify",
@@ -53,6 +55,7 @@ SWITCHES: tuple[SamsungACSwitchDescription, ...] = (
         status_attr="air_purify",
         on_value=AirPurifyMode.ON,
         off_value=AirPurifyMode.OFF,
+        icon="mdi:air-purifier",
     ),
     SamsungACSwitchDescription(
         key="auto_clean",
@@ -61,6 +64,7 @@ SWITCHES: tuple[SamsungACSwitchDescription, ...] = (
         on_value=AutoCleanSetting.ON,
         off_value=AutoCleanSetting.OFF,
         entity_category=EntityCategory.CONFIG,
+        icon="mdi:vacuum",
     ),
 )
 

@@ -88,6 +88,7 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         key="filter_status",
         translation_key="filter_status",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:air-filter",
     ),
     SensorEntityDescription(
         key="sleep_timer_minutes",
@@ -108,6 +109,7 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         translation_key="operation_count",
         state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:counter",
     ),
     SensorEntityDescription(
         key="ai_sleep_elapsed_minutes",
