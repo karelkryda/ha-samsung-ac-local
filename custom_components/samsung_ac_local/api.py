@@ -334,7 +334,7 @@ class SamsungACClient:
         """
         return self._post(
             Resource.WIND_STRENGTH,
-            {f"{SAMSUNG_PREFIX}modes": FAN_MODE_TO_INDEX[mode]},
+            {f"{SAMSUNG_PREFIX}modes": str(FAN_MODE_TO_INDEX[mode])},
         )
 
     def set_swing_mode(self, mode: SwingMode) -> str | None:
