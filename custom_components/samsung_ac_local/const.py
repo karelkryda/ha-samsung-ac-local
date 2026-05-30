@@ -48,7 +48,7 @@ class Resource(StrEnum):
     MODE = "mode/vs/0"
     TEMPERATURE_CURRENT = "temperature/current/0"
     TEMPERATURES = "temperatures/vs/0"
-    TEMPERATURE_CONTROL = "temperature/control/vs/0"
+    TEMPERATURE_DESIRED = "temperature/desired/0"
     WIND_STRENGTH = "wind/strength/vs/0"
     WIND_DIRECTION = "wind/direction/vs/0"
     HUMIDITY = "humidity/vs/0"

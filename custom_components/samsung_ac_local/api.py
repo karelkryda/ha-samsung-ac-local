@@ -319,7 +319,7 @@ class SamsungACClient:
             CoAP response code or None on failure.
 
         """
-        return self._post(Resource.TEMPERATURES, {"temperature": temp})
+        return self._post(Resource.TEMPERATURE_DESIRED, {"temperature": temp})
 
     def set_fan_mode(self, mode: FanMode) -> str | None:
         """
