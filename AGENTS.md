@@ -33,6 +33,21 @@ Home Assistant custom integration for local control of Samsung OCF air condition
 - Token validation in responses: UDP can deliver stale/reordered packets.
 - Samsung uses Fahrenheit for outdoor temp in options array despite device locale.
 - `_get()` guards against non-dict CBOR responses (firmware quirk, returns None).
+- Optimistic state updates: after a confirmed command (2.04 + controlResponse), entities update coordinator data immediately via `async_update_optimistic()`. No post-command polling. The regular poll cycle (configurable, default 30s) serves as reconciliation for side effects and external changes.
+- `_post()` validates: code == "2.04" AND controlResponse present AND (result is True OR errorCode == "unchanged"). Returns bool.
+- `async_set_updated_data` resets the poll timer, preventing a scheduled poll from overwriting optimistic state with stale data.
+
+## CoAP Observe (Push) - Discovered, Not Yet Implemented
+
+All 18 resources support CoAP Observe (RFC 7641). Tested:
+
+- AC responds with Observe option in GET+Observe initial response.
+- Notifications are NON (non-confirmable) with full resource payload (CBOR).
+- Push works across connections (command on connection A triggers notification on connection B).
+- Notification contains the real new state (arrives after internal propagation).
+- Propagation time: 468-705ms for single resource (measured on beep toggle).
+
+Future enhancement: register Observe on all resources for instant push updates, keep polling as fallback for missed UDP packets. Would require client re-architecture (background listener thread for multiplexing notifications and command responses on same socket).
 
 ## Samsung Protocol Quirks
 
