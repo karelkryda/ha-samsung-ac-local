@@ -7,5 +7,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/karelkryda/ha-samsung-ac-local/issues",
   "requirements": ["cbor2==6.1.1"],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }
