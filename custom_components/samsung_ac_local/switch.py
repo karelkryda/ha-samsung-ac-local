@@ -11,7 +11,7 @@ from homeassistant.components.switch import SwitchEntity, SwitchEntityDescriptio
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, AirPurifyMode, BeepVolume, LightMode
+from .const import DOMAIN, AirPurifyMode, AutoCleanSetting, BeepVolume, LightMode
 from .coordinator import SamsungACCoordinator
 
 if TYPE_CHECKING:
@@ -58,8 +58,8 @@ SWITCHES: tuple[SamsungACSwitchDescription, ...] = (
         key="auto_clean",
         translation_key="auto_clean",
         status_attr="auto_clean_setting",
-        on_value="On",
-        off_value="Off",
+        on_value=AutoCleanSetting.ON,
+        off_value=AutoCleanSetting.OFF,
         entity_category=EntityCategory.CONFIG,
     ),
 )
@@ -131,22 +131,15 @@ class SamsungACSwitch(CoordinatorEntity[SamsungACCoordinator], SwitchEntity):
 
     async def async_turn_on(self) -> None:
         """Turn the switch on."""
-        desc = self.entity_description
-        method = getattr(self._client, _SET_METHODS[desc.key])
-        if desc.key == "auto_clean":
-            await self.hass.async_add_executor_job(lambda: method(enabled=True))
-        else:
-            await self.hass.async_add_executor_job(method, desc.on_value)
-
-        await self.coordinator.async_request_refresh()
+        await self._async_set(self.entity_description.on_value)
 
     async def async_turn_off(self) -> None:
         """Turn the switch off."""
+        await self._async_set(self.entity_description.off_value)
+
+    async def _async_set(self, value: Any) -> None:
+        """Send command and update optimistically on success."""
         desc = self.entity_description
         method = getattr(self._client, _SET_METHODS[desc.key])
-        if desc.key == "auto_clean":
-            await self.hass.async_add_executor_job(lambda: method(enabled=False))
-        else:
-            await self.hass.async_add_executor_job(method, desc.off_value)
-
-        await self.coordinator.async_request_refresh()
+        if await self.hass.async_add_executor_job(method, value):
+            self.coordinator.async_update_optimistic(**{desc.status_attr: value})

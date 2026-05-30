@@ -5,9 +5,11 @@ Wraps the blocking SamsungACClient.get_status() call in an executor job
 and provides the ACStatus dataclass to all subscribed entities.
 """
 
+from dataclasses import replace
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from homeassistant.core import callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
@@ -55,6 +57,21 @@ class SamsungACCoordinator(DataUpdateCoordinator[ACStatus]):
             always_update=False,
         )
         self.client = client
+
+    @callback
+    def async_update_optimistic(self, **kwargs: Any) -> None:
+        """
+        Optimistically update status fields and notify all entities.
+
+        Called after the AC confirms a command to immediately reflect
+        the change in the UI. Also resets the poll timer to prevent a
+        scheduled poll from overwriting with stale data.
+
+        Args:
+            **kwargs: ACStatus field names and their new values.
+
+        """
+        self.async_set_updated_data(replace(self.data, **kwargs))
 
     async def _async_update_data(self) -> ACStatus:
         """Fetch AC status via the blocking DTLS client."""

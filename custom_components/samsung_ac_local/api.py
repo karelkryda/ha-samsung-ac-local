@@ -282,7 +282,7 @@ class SamsungACClient:
         return info
 
     # --- Setters ---
-    def set_power(self, power: Power) -> str | None:
+    def set_power(self, power: Power) -> bool:
         """
         Turn the AC on or off.
 
@@ -290,12 +290,12 @@ class SamsungACClient:
             power: Desired power state.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(Resource.POWER, {f"{SAMSUNG_PREFIX}power": power.value})
 
-    def set_hvac_mode(self, mode: HvacMode) -> str | None:
+    def set_hvac_mode(self, mode: HvacMode) -> bool:
         """
         Set the HVAC operating mode.
 
@@ -303,12 +303,12 @@ class SamsungACClient:
             mode: One of Auto, Cool, Dry, Fan, Heat.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(Resource.MODE, {f"{SAMSUNG_PREFIX}modes": [mode.value]})
 
-    def set_target_temperature(self, temp: float) -> str | None:
+    def set_target_temperature(self, temp: float) -> bool:
         """
         Set the target temperature.
 
@@ -316,12 +316,12 @@ class SamsungACClient:
             temp: Temperature in Celsius (16.0-30.0).
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(Resource.TEMPERATURE_DESIRED, {"temperature": temp})
 
-    def set_fan_mode(self, mode: FanMode) -> str | None:
+    def set_fan_mode(self, mode: FanMode) -> bool:
         """
         Set the fan speed.
 
@@ -329,7 +329,7 @@ class SamsungACClient:
             mode: Desired fan speed.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(
@@ -337,7 +337,7 @@ class SamsungACClient:
             {f"{SAMSUNG_PREFIX}modes": str(FAN_MODE_TO_INDEX[mode])},
         )
 
-    def set_swing_mode(self, mode: SwingMode) -> str | None:
+    def set_swing_mode(self, mode: SwingMode) -> bool:
         """
         Set the air swing direction.
 
@@ -345,7 +345,7 @@ class SamsungACClient:
             mode: Desired swing mode.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(
@@ -353,7 +353,7 @@ class SamsungACClient:
             {f"{SAMSUNG_PREFIX}modes": mode.value},
         )
 
-    def set_convenient_mode(self, mode: ConvenientMode) -> str | None:
+    def set_convenient_mode(self, mode: ConvenientMode) -> bool:
         """
         Set the convenient (comfort/preset) mode.
 
@@ -363,12 +363,12 @@ class SamsungACClient:
             mode: Desired convenient mode.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(Resource.CONVENIENT, {f"{SAMSUNG_PREFIX}modes": mode.value})
 
-    def set_beep(self, volume: BeepVolume) -> str | None:
+    def set_beep(self, volume: BeepVolume) -> bool:
         """
         Set the beep volume.
 
@@ -376,12 +376,12 @@ class SamsungACClient:
             volume: Desired beep setting.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(Resource.MODE, {f"{SAMSUNG_PREFIX}options": [volume.value]})
 
-    def set_light(self, mode: LightMode) -> str | None:
+    def set_light(self, mode: LightMode) -> bool:
         """
         Set the display panel light.
 
@@ -389,28 +389,27 @@ class SamsungACClient:
             mode: On or Off.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(Resource.LIGHT, {"mode": mode.value})
 
-    def set_auto_clean(self, *, enabled: bool) -> str | None:
+    def set_auto_clean(self, setting: AutoCleanSetting) -> bool:
         """
         Enable or disable auto-clean.
 
         Args:
-            enabled: Whether auto-clean should be active.
+            setting: Desired auto-clean setting.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
-        value = "On" if enabled else "Off"
         return self._post(
-            Resource.AUTO_CLEAN, {f"{SAMSUNG_PREFIX}settingStatus": value}
+            Resource.AUTO_CLEAN, {f"{SAMSUNG_PREFIX}settingStatus": setting.value}
         )
 
-    def set_auto_clean_action(self, action: AutoCleanAction) -> str | None:
+    def set_auto_clean_action(self, action: AutoCleanAction) -> bool:
         """
         Start or stop an auto-clean cycle immediately.
 
@@ -418,14 +417,14 @@ class SamsungACClient:
             action: Start or Stop.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(
             Resource.AUTO_CLEAN, {f"{SAMSUNG_PREFIX}status": action.value}
         )
 
-    def set_air_purify(self, mode: AirPurifyMode) -> str | None:
+    def set_air_purify(self, mode: AirPurifyMode) -> bool:
         """
         Set the air purify (ionizer) mode.
 
@@ -433,7 +432,7 @@ class SamsungACClient:
             mode: On or Off.
 
         Returns:
-            CoAP response code or None on failure.
+            True if the AC accepted the command.
 
         """
         return self._post(Resource.AIR_PURIFY, {f"{SAMSUNG_PREFIX}modes": mode.value})
@@ -745,19 +744,27 @@ class SamsungACClient:
         LOGGER.debug("GET %s returned %s", resource.value, code)
         return None
 
-    def _post(self, resource: Resource, payload: dict) -> str | None:
-        """POST to a resource, returning the response code or None."""
+    def _post(self, resource: Resource, payload: dict) -> bool:
+        """POST to a resource, returning True if the AC accepted the command."""
         with self._lock:
             try:
-                code, _ = self._request_locked(COAP_POST, resource.value, payload)
+                code, data = self._request_locked(COAP_POST, resource.value, payload)
             except (SamsungACConnectionError, SamsungACRequestError) as err:
                 LOGGER.error("POST %s failed: %s", resource.value, err)
-                return None
+                return False
 
-        if code and not code.startswith("2."):
-            LOGGER.warning("POST %s returned %s", resource.value, code)
+        if code != "2.04":
+            LOGGER.warning("POST %s returned code %s", resource.value, code)
+            return False
 
-        return code
+        response = data.get("controlResponse") if isinstance(data, dict) else None
+        if not response:
+            LOGGER.warning("POST %s: no controlResponse in reply", resource.value)
+            return False
+
+        return (
+            response.get("result") is True or response.get("errorCode") == "unchanged"
+        )
 
     # --- Status polling helpers (private) ---
     def _poll_power(self, status: ACStatus) -> None:

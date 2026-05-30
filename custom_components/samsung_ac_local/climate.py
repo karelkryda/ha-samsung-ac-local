@@ -210,62 +210,63 @@ class SamsungACClimateEntity(CoordinatorEntity[SamsungACCoordinator], ClimateEnt
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set HVAC mode."""
         if hvac_mode == HVACMode.OFF:
-            await self.hass.async_add_executor_job(self._client.set_power, Power.OFF)
+            await self.async_turn_off()
         else:
             # Turn on if currently off
-            if self._attr_hvac_mode == HVACMode.OFF:
-                await self.hass.async_add_executor_job(self._client.set_power, Power.ON)
+            if (
+                self._attr_hvac_mode == HVACMode.OFF
+                and not await self.hass.async_add_executor_job(
+                    self._client.set_power, Power.ON
+                )
+            ):
+                return
 
             samsung_mode = _HVAC_MODE_REVERSE.get(hvac_mode)
-            if samsung_mode:
-                await self.hass.async_add_executor_job(
-                    self._client.set_hvac_mode, samsung_mode
+            if samsung_mode and await self.hass.async_add_executor_job(
+                self._client.set_hvac_mode, samsung_mode
+            ):
+                self.coordinator.async_update_optimistic(
+                    power=Power.ON, hvac_mode=samsung_mode
                 )
-
-        await self.coordinator.async_request_refresh()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set target temperature."""
         temp = kwargs.get(ATTR_TEMPERATURE)
-        if temp is not None:
-            await self.hass.async_add_executor_job(
-                self._client.set_target_temperature, float(temp)
-            )
-            await self.coordinator.async_request_refresh()
+        if temp is not None and await self.hass.async_add_executor_job(
+            self._client.set_target_temperature, float(temp)
+        ):
+            self.coordinator.async_update_optimistic(target_temperature=float(temp))
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set fan mode."""
         samsung_fan = _FAN_MODE_REVERSE.get(fan_mode)
-        if samsung_fan:
-            await self.hass.async_add_executor_job(
-                self._client.set_fan_mode, samsung_fan
-            )
-            await self.coordinator.async_request_refresh()
+        if samsung_fan and await self.hass.async_add_executor_job(
+            self._client.set_fan_mode, samsung_fan
+        ):
+            self.coordinator.async_update_optimistic(fan_mode=samsung_fan)
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set swing mode."""
         samsung_swing = _SWING_MODE_REVERSE.get(swing_mode)
-        if samsung_swing:
-            await self.hass.async_add_executor_job(
-                self._client.set_swing_mode, samsung_swing
-            )
-            await self.coordinator.async_request_refresh()
+        if samsung_swing and await self.hass.async_add_executor_job(
+            self._client.set_swing_mode, samsung_swing
+        ):
+            self.coordinator.async_update_optimistic(swing_mode=samsung_swing)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set preset (convenient) mode."""
         samsung_preset = _PRESET_MODE_REVERSE.get(preset_mode)
-        if samsung_preset:
-            await self.hass.async_add_executor_job(
-                self._client.set_convenient_mode, samsung_preset
-            )
-            await self.coordinator.async_request_refresh()
+        if samsung_preset and await self.hass.async_add_executor_job(
+            self._client.set_convenient_mode, samsung_preset
+        ):
+            self.coordinator.async_update_optimistic(convenient_mode=samsung_preset)
 
     async def async_turn_on(self) -> None:
         """Turn the AC on."""
-        await self.hass.async_add_executor_job(self._client.set_power, Power.ON)
-        await self.coordinator.async_request_refresh()
+        if await self.hass.async_add_executor_job(self._client.set_power, Power.ON):
+            self.coordinator.async_update_optimistic(power=Power.ON)
 
     async def async_turn_off(self) -> None:
         """Turn the AC off."""
-        await self.hass.async_add_executor_job(self._client.set_power, Power.OFF)
-        await self.coordinator.async_request_refresh()
+        if await self.hass.async_add_executor_job(self._client.set_power, Power.OFF):
+            self.coordinator.async_update_optimistic(power=Power.OFF)
