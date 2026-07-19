@@ -46,6 +46,8 @@ def mock_status() -> ACStatus:
         auto_clean_setting=AutoCleanSetting.ON,
         auto_clean_active=False,
         auto_clean_progress=0,
+        freeze_wash_active=False,
+        freeze_wash_progress=0,
         filter_usage_hours=120,
         filter_capacity_hours=2000,
         filter_status="Normal",
@@ -116,6 +118,7 @@ def mock_client(mock_status: ACStatus, mock_device_info: DeviceInfo) -> MagicMoc
     client.set_light.return_value = True
     client.set_auto_clean.return_value = True
     client.set_auto_clean_action.return_value = True
+    client.set_freeze_wash_action.return_value = True
     client.set_air_purify.return_value = True
     return client
 

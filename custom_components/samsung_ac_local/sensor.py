@@ -2,7 +2,8 @@
 Sensor platform for the Samsung AC Local integration.
 
 Exposes read-only measurements: outdoor temperature, energy consumption,
-filter usage, WiFi signal strength, and operation count.
+filter usage, WiFi signal strength, operation count, auto-clean progress,
+freeze wash progress, and more.
 """
 
 from typing import TYPE_CHECKING
@@ -73,6 +74,13 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="auto_clean_progress",
         translation_key="auto_clean_progress",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="freeze_wash_progress",
+        translation_key="freeze_wash_progress",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,

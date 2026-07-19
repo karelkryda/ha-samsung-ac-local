@@ -39,6 +39,7 @@ from .const import (
     BeepVolume,
     ConvenientMode,
     FanMode,
+    FreezeWashAction,
     HvacMode,
     LightMode,
     Power,
@@ -78,6 +79,8 @@ class ACStatus:
     auto_clean_setting: AutoCleanSetting | None = None
     auto_clean_active: bool | None = None
     auto_clean_progress: int | None = None
+    freeze_wash_active: bool | None = None
+    freeze_wash_progress: int | None = None
     filter_usage_hours: int | None = None
     filter_capacity_hours: int | None = None
     filter_status: str | None = None
@@ -422,6 +425,22 @@ class SamsungACClient:
         """
         return self._post(
             Resource.AUTO_CLEAN, {f"{SAMSUNG_PREFIX}status": action.value}
+        )
+
+    def set_freeze_wash_action(self, action: FreezeWashAction) -> bool:
+        """
+        Start or stop a freeze wash cycle immediately.
+
+        Args:
+            action: Start or Stop.
+
+        Returns:
+            True if the AC accepted the command.
+
+        """
+        return self._post(
+            Resource.MODE,
+            {f"{SAMSUNG_PREFIX}options": [f"SmartCoolClean_{action.value}"]},
         )
 
     def set_air_purify(self, mode: AirPurifyMode) -> bool:
@@ -1023,6 +1042,10 @@ def _parse_mode_options(status: ACStatus, options: list) -> None:
             raw = _to_float(value)
             if raw is not None:
                 status.ai_temperature = raw / 10.0
+        elif key == "SmartCoolClean":
+            status.freeze_wash_active = value == FreezeWashAction.START
+        elif key == "ProgressSmartClean":
+            status.freeze_wash_progress = _to_int(value)
 
 
 def _parse_beep(data: dict) -> BeepVolume | None:

@@ -46,6 +46,9 @@
       "auto_clean_progress": {
         "name": "Auto clean progress"
       },
+      "freeze_wash_progress": {
+        "name": "Freeze wash progress"
+      },
       "filter_capacity": {
         "name": "Filter capacity"
       },
@@ -85,6 +88,12 @@
       },
       "stop_auto_clean": {
         "name": "Stop auto clean"
+      },
+      "start_freeze_wash": {
+        "name": "Start freeze wash"
+      },
+      "stop_freeze_wash": {
+        "name": "Stop freeze wash"
       }
     },
     "binary_sensor": {
@@ -93,6 +102,9 @@
       },
       "auto_clean_active": {
         "name": "Auto clean active"
+      },
+      "freeze_wash_active": {
+        "name": "Freeze wash active"
       },
       "outdoor_connected": {
         "name": "Outdoor unit connected"

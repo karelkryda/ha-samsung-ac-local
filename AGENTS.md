@@ -10,10 +10,10 @@ Home Assistant custom integration for local control of Samsung OCF air condition
 - `cert.py` - Bundled self-signed EC certificate with the Samsung cloud server UUID. No external cert files needed.
 - `coordinator.py` - DataUpdateCoordinator polling `get_status()` every N seconds (configurable).
 - `climate.py` - ClimateEntity with HVAC modes, fan, swing, presets (convenient modes).
-- `sensor.py` - 12 sensors (energy, temps, filter, RSSI, timers, etc.)
+- `sensor.py` - 13 sensors (energy, temps, filter, RSSI, timers, freeze wash progress, etc.)
 - `switch.py` - 4 switches (light, beep, air purify, auto clean).
-- `binary_sensor.py` - 5 binary sensors (cloud connected, outdoor unit, auto clean active, AI sleep, mute once).
-- `button.py` - 2 buttons (start/stop auto-clean cycle).
+- `binary_sensor.py` - 6 binary sensors (cloud connected, outdoor unit, auto clean active, freeze wash active, AI sleep, mute once).
+- `button.py` - 4 buttons (start/stop auto-clean cycle, start/stop freeze wash).
 - `config_flow.py` - Setup flow (host only) + options flow (poll interval).
 - `const.py` - All enums, resource paths, protocol constants.
 - `data.py` - Typed ConfigEntry runtime data.

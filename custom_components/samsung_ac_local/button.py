@@ -1,7 +1,7 @@
 """
 Button platform for the Samsung AC Local integration.
 
-Exposes one-shot actions: start/stop auto-clean cycle.
+Exposes one-shot actions: start/stop auto-clean cycle, start/stop freeze wash.
 """
 
 from dataclasses import dataclass
@@ -11,7 +11,7 @@ from homeassistant.components.button import ButtonEntity, ButtonEntityDescriptio
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, AutoCleanAction
+from .const import DOMAIN, AutoCleanAction, FreezeWashAction
 from .coordinator import SamsungACCoordinator
 
 if TYPE_CHECKING:
@@ -43,6 +43,22 @@ BUTTONS: tuple[SamsungACButtonDescription, ...] = (
         translation_key="stop_auto_clean",
         method="set_auto_clean_action",
         argument=AutoCleanAction.STOP,
+        entity_category=EntityCategory.CONFIG,
+        icon="mdi:stop-circle-outline",
+    ),
+    SamsungACButtonDescription(
+        key="start_freeze_wash",
+        translation_key="start_freeze_wash",
+        method="set_freeze_wash_action",
+        argument=FreezeWashAction.START,
+        entity_category=EntityCategory.CONFIG,
+        icon="mdi:snowflake-melt",
+    ),
+    SamsungACButtonDescription(
+        key="stop_freeze_wash",
+        translation_key="stop_freeze_wash",
+        method="set_freeze_wash_action",
+        argument=FreezeWashAction.STOP,
         entity_category=EntityCategory.CONFIG,
         icon="mdi:stop-circle-outline",
     ),

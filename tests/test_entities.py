@@ -39,6 +39,7 @@ from custom_components.samsung_ac_local.const import (
     BeepVolume,
     ConvenientMode,
     FanMode,
+    FreezeWashAction,
     HvacMode,
     LightMode,
     Power,
@@ -407,6 +408,18 @@ class TestSensorsState:
         assert state is not None
         assert float(state.state) == 23.5
 
+    async def test_freeze_wash_progress(
+        self,
+        hass: HomeAssistant,
+        setup_integration: MockConfigEntry,
+    ) -> None:
+        """Freeze wash progress sensor reports percentage."""
+        _ = setup_integration
+        entity_id = _get_entity_id(hass, "sensor", f"{DEVICE_ID}_freeze_wash_progress")
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert int(state.state) == 0
+
 
 class TestSwitchesState:
     """Tests for switch entity state values."""
@@ -580,6 +593,20 @@ class TestBinarySensorsState:
         assert state is not None
         assert state.state == STATE_OFF
 
+    async def test_freeze_wash_active(
+        self,
+        hass: HomeAssistant,
+        setup_integration: MockConfigEntry,
+    ) -> None:
+        """Freeze wash active binary sensor reports OFF when not running."""
+        _ = setup_integration
+        entity_id = _get_entity_id(
+            hass, "binary_sensor", f"{DEVICE_ID}_freeze_wash_active"
+        )
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == STATE_OFF
+
     async def test_outdoor_connected(
         self,
         hass: HomeAssistant,
@@ -657,3 +684,37 @@ class TestButtonCommands:
             blocking=True,
         )
         mock_client.set_auto_clean_action.assert_called_with(AutoCleanAction.STOP)
+
+    async def test_start_freeze_wash(
+        self,
+        hass: HomeAssistant,
+        mock_client: MagicMock,
+        setup_integration: MockConfigEntry,
+    ) -> None:
+        """Pressing start freeze wash calls set_freeze_wash_action with START."""
+        _ = setup_integration
+        entity_id = _get_entity_id(hass, "button", f"{DEVICE_ID}_start_freeze_wash")
+        await hass.services.async_call(
+            BUTTON_DOMAIN,
+            SERVICE_PRESS,
+            {ATTR_ENTITY_ID: entity_id},
+            blocking=True,
+        )
+        mock_client.set_freeze_wash_action.assert_called_with(FreezeWashAction.START)
+
+    async def test_stop_freeze_wash(
+        self,
+        hass: HomeAssistant,
+        mock_client: MagicMock,
+        setup_integration: MockConfigEntry,
+    ) -> None:
+        """Pressing stop freeze wash calls set_freeze_wash_action with STOP."""
+        _ = setup_integration
+        entity_id = _get_entity_id(hass, "button", f"{DEVICE_ID}_stop_freeze_wash")
+        await hass.services.async_call(
+            BUTTON_DOMAIN,
+            SERVICE_PRESS,
+            {ATTR_ENTITY_ID: entity_id},
+            blocking=True,
+        )
+        mock_client.set_freeze_wash_action.assert_called_with(FreezeWashAction.STOP)

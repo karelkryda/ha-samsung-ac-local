@@ -189,6 +189,13 @@ class AutoCleanAction(StrEnum):
     STOP = "Stop"
 
 
+class FreezeWashAction(StrEnum):
+    """Freeze wash immediate action (start/stop a cleaning cycle now)."""
+
+    START = "On"
+    STOP = "Off"
+
+
 class OutdoorConnection(StrEnum):
     """Outdoor unit connection status."""
 

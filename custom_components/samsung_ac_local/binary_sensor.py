@@ -1,7 +1,8 @@
 """
 Binary sensor platform for the Samsung AC Local integration.
 
-Exposes boolean states: cloud connection status and auto-clean activity.
+Exposes boolean states: cloud connection, outdoor unit, auto-clean activity,
+freeze wash activity, AI sleep, and mute once.
 """
 
 from typing import TYPE_CHECKING
@@ -33,6 +34,11 @@ BINARY_SENSORS: tuple[BinarySensorEntityDescription, ...] = (
     BinarySensorEntityDescription(
         key="auto_clean_active",
         translation_key="auto_clean_active",
+        device_class=BinarySensorDeviceClass.RUNNING,
+    ),
+    BinarySensorEntityDescription(
+        key="freeze_wash_active",
+        translation_key="freeze_wash_active",
         device_class=BinarySensorDeviceClass.RUNNING,
     ),
     BinarySensorEntityDescription(
