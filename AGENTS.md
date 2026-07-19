@@ -7,12 +7,13 @@ Home Assistant custom integration for local control of Samsung OCF air condition
 ## Architecture
 
 - `api.py` - Blocking DTLS/CoAP client. Thread-safe, persistent connection, ~50ms per command. Uses pyOpenSSL (HA core dependency) + cbor2. Called via `async_add_executor_job`.
+- `cert.py` - Bundled self-signed EC certificate with the Samsung cloud server UUID. No external cert files needed.
 - `coordinator.py` - DataUpdateCoordinator polling `get_status()` every N seconds (configurable).
 - `climate.py` - ClimateEntity with HVAC modes, fan, swing, presets (convenient modes).
 - `sensor.py` - 12 sensors (energy, temps, filter, RSSI, timers, etc.)
 - `switch.py` - 4 switches (light, beep, air purify, auto clean).
 - `binary_sensor.py` - 5 binary sensors (cloud connected, outdoor unit, auto clean active, AI sleep, mute once).
-- `config_flow.py` - Setup flow (host + cert paths) + options flow (poll interval).
+- `config_flow.py` - Setup flow (host only) + options flow (poll interval).
 - `const.py` - All enums, resource paths, protocol constants.
 - `data.py` - Typed ConfigEntry runtime data.
 
@@ -20,7 +21,7 @@ Home Assistant custom integration for local control of Samsung OCF air condition
 
 - Transport: DTLS 1.2 over UDP port 49154 (pyOpenSSL `DTLS_CLIENT_METHOD`)
 - Payload: CoAP (RFC 7252) with CBOR-encoded bodies
-- Auth: Self-signed EC cert with UUID in subject field, matched against device ACL
+- Auth: Self-signed EC cert with Samsung cloud UUID in subject field - device checks UUID against ACL
 - Handshake: ~4-5s initial, then persistent connection
 - Responses: Some resources use indefinite-length CBOR with 0xFF break codes
 - CoAP payload marker found by walking options structure (not naive byte search)
@@ -29,6 +30,7 @@ Home Assistant custom integration for local control of Samsung OCF air condition
 
 - pyOpenSSL over python-mbedtls: HA runs on Alpine (musl), mbedtls has no musl wheels. pyOpenSSL is already in HA core.
 - Blocking client + executor: pyOpenSSL DTLS is synchronous. No async DTLS lib exists for Python.
+- Bundled certificate: The Samsung cloud UUID is global (same for all Samsung OCF devices) and provisioned into every device's ACL during SmartThings pairing. The AC does not verify cert chains - it only extracts the UUID and checks ACL. This means zero setup beyond providing the AC IP.
 - Class-level timeouts: 10s handshake, 3s recv - not configurable, they're protocol physics.
 - Token validation in responses: UDP can deliver stale/reordered packets.
 - Samsung uses Fahrenheit for outdoor temp in options array despite device locale.
@@ -45,7 +47,7 @@ All 18 resources support CoAP Observe (RFC 7641). Tested:
 - Notifications are NON (non-confirmable) with full resource payload (CBOR).
 - Push works across connections (command on connection A triggers notification on connection B).
 - Notification contains the real new state (arrives after internal propagation).
-- Propagation time: 468-705ms for single resource (measured on beep toggle).
+- Propagation time: 468-705ms for single resource.
 
 Future enhancement: register Observe on all resources for instant push updates, keep polling as fallback for missed UDP packets. Would require client re-architecture (background listener thread for multiplexing notifications and command responses on same socket).
 
@@ -60,9 +62,8 @@ Future enhancement: register Observe on all resources for instant push updates, 
 
 ## Testing
 
-Client can be tested standalone without HA using importlib trick (see CONTRIBUTING.md).
-Live AC at 192.168.40.16:49154. Certs in samsung_ac_project/final_access/.
+Run `pytest tests/` from the project root. Tests mock the DTLS socket layer and do not require a live AC. Uses `pytest-homeassistant-custom-component` for HA integration tests and plain pytest for protocol-level tests.
 
 ## Ruff Config
 
-`select = ["ALL"]` with minimal ignores. Python 3.14 target. No `from __future__ import annotations` needed.
+`select = ["ALL"]` with minimal ignores. Python 3.14 target. No `from __future__ import annotations` needed. Tests exempt from S101/SLF001/PLR2004/ANN201/D1xx/D205/D400/D415/TC001-003.

@@ -3,19 +3,14 @@
     "step": {
       "user": {
         "title": "Samsung AC Local",
-        "description": "Set up local control of your Samsung air conditioner via DTLS/CoAP.",
+        "description": "Set up local control of your Samsung air conditioner. The AC must be paired with SmartThings and on the same network as Home Assistant.",
         "data": {
-          "host": "AC IP address",
-          "cert_path": "Client certificate path",
-          "key_path": "Client key path"
+          "host": "AC IP address"
         }
       }
     },
     "error": {
-      "cannot_connect": "Cannot connect to the AC. Check the IP address and that the AC is on the network.",
-      "cert_not_found": "Certificate file not found at the specified path.",
-      "key_not_found": "Key file not found at the specified path.",
-      "cert_read_error": "Failed to read the certificate or key file."
+      "cannot_connect": "Cannot connect to the AC. Verify the IP address, that the AC is on the network, and that it has been paired with SmartThings."
     },
     "abort": {
       "already_configured": "This AC is already configured."

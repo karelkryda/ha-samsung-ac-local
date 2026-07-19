@@ -1,11 +1,10 @@
 """
 Config flow for the Samsung AC Local integration.
 
-Handles initial setup (host + certificate paths) and options flow
+Handles initial setup (host only) and options flow
 (poll interval) for post-setup configuration changes.
 """
 
-from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
@@ -18,19 +17,16 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 
 from .api import SamsungACClient, SamsungACConnectionError
+from .cert import CERT_PEM, KEY_PEM
 from .const import DOMAIN, LOGGER
 from .coordinator import DEFAULT_POLL_INTERVAL
 
 CONF_HOST = "host"
-CONF_CERT_PATH = "cert_path"
-CONF_KEY_PATH = "key_path"
 CONF_POLL_INTERVAL = "poll_interval"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
-        vol.Required(CONF_CERT_PATH, default="/config/samsung_ac/client_cert.pem"): str,
-        vol.Required(CONF_KEY_PATH, default="/config/samsung_ac/client_key.pem"): str,
     }
 )
 
@@ -38,7 +34,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 class SamsungACLocalConfigFlow(ConfigFlow, domain=DOMAIN):
     """Config flow for Samsung AC Local."""
 
-    VERSION = 1
+    VERSION = 2
 
     @staticmethod
     @callback
@@ -53,8 +49,8 @@ class SamsungACLocalConfigFlow(ConfigFlow, domain=DOMAIN):
         """
         Handle the user setup step.
 
-        Asks for AC host IP and paths to certificate/key files,
-        then validates the connection with a DTLS handshake.
+        Asks for the AC host IP address, then validates the connection
+        with a DTLS handshake using the bundled certificate.
         """
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -83,28 +79,16 @@ class SamsungACLocalConfigFlow(ConfigFlow, domain=DOMAIN):
         """
         Validate the user input by attempting a DTLS connection.
 
-        This is a blocking method called via async_add_executor_job.
+        Uses the bundled certificate with the Samsung cloud UUID.
         Returns an error key on failure, None on success.
         """
-        cert_path = Path(user_input[CONF_CERT_PATH])
-        if not cert_path.is_file():
-            return "cert_not_found"
-
-        key_path = Path(user_input[CONF_KEY_PATH])
-        if not key_path.is_file():
-            return "key_not_found"
-
-        try:
-            cert_pem = cert_path.read_text()
-            key_pem = key_path.read_text()
-        except OSError:
-            LOGGER.exception("Failed to read certificate files")
-            return "cert_read_error"
-
-        client = SamsungACClient(user_input[CONF_HOST], cert_pem, key_pem)
+        client = SamsungACClient(user_input[CONF_HOST], CERT_PEM, KEY_PEM)
         try:
             client.connect()
         except SamsungACConnectionError:
+            LOGGER.debug(
+                "Connection test to %s failed", user_input[CONF_HOST], exc_info=True
+            )
             return "cannot_connect"
         finally:
             client.disconnect()

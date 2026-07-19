@@ -5,18 +5,20 @@ Controls Samsung OCF air conditioners locally via DTLS/CoAP,
 bypassing the Samsung SmartThings cloud.
 """
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .api import SamsungACClient, SamsungACConnectionError
-from .config_flow import CONF_CERT_PATH, CONF_HOST, CONF_KEY_PATH, CONF_POLL_INTERVAL
+from .cert import CERT_PEM, KEY_PEM
+from .config_flow import CONF_HOST, CONF_POLL_INTERVAL
+from .const import LOGGER
 from .coordinator import DEFAULT_POLL_INTERVAL, SamsungACCoordinator
 from .data import SamsungACConfigEntry, SamsungACData
 
 if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
 PLATFORMS: list[Platform] = [
@@ -31,22 +33,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: SamsungACConfigEntry) ->
     """
     Set up Samsung AC Local from a config entry.
 
-    Reads certificates, establishes the DTLS connection, fetches device info,
-    and starts the polling coordinator.
+    Establishes the DTLS connection using the bundled certificate,
+    fetches device info, and starts the polling coordinator.
     """
-    cert_pem = await hass.async_add_executor_job(
-        Path(entry.data[CONF_CERT_PATH]).read_text
-    )
-    key_pem = await hass.async_add_executor_job(
-        Path(entry.data[CONF_KEY_PATH]).read_text
-    )
-
-    client = SamsungACClient(entry.data[CONF_HOST], cert_pem, key_pem)
+    host = entry.data[CONF_HOST]
+    client = SamsungACClient(host, CERT_PEM, KEY_PEM)
     try:
         await hass.async_add_executor_job(client.connect)
     except SamsungACConnectionError as err:
         await hass.async_add_executor_job(client.disconnect)
-        msg = f"Failed to connect to Samsung AC at {entry.data[CONF_HOST]}"
+        msg = f"Failed to connect to Samsung AC at {host}"
         raise ConfigEntryNotReady(msg) from err
 
     device_info = await hass.async_add_executor_job(client.get_device_info)
@@ -80,3 +76,17 @@ async def _async_options_updated(
 ) -> None:
     """Reload the integration when options change."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """
+    Migrate config entry to a new version.
+
+    v1 -> v2: Removed cert_path and key_path (now using bundled certificate).
+    """
+    if entry.version == 1:
+        LOGGER.debug("Migrating config entry from version 1 to 2")
+        new_data = {CONF_HOST: entry.data[CONF_HOST]}
+        hass.config_entries.async_update_entry(entry, data=new_data, version=2)
+
+    return True

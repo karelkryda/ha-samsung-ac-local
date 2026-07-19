@@ -2,12 +2,16 @@
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
 
-Local control of Samsung OCF air conditioners via DTLS/CoAP - no cloud, no SmartThings dependency.
+Local control of Samsung OCF air conditioners via DTLS/CoAP - no cloud, no SmartThings dependency after initial pairing.
+
+> [!IMPORTANT]
+> This is a personal project built for my own Samsung AC. I'm sharing it publicly in case it helps someone else, but please keep in mind that I can't guarantee it will work with your setup. I won't necessarily respond to issues or feature requests, and I only plan to extend the integration as far as my own needs go. You may not fork, redistribute, modify, or sell this software. See [LICENSE](LICENSE) for details. If it works for you - awesome! If not - you're on your own.
 
 ## Features
 
 - Direct local communication over DTLS (encrypted UDP)
 - Persistent connection with ~50ms command latency
+- Zero-config certificate - just enter the AC's IP address
 - Full climate entity (HVAC modes, temperature, fan, swing, presets)
 - WindFree, Sleep, Quiet, Smart, Speed, DryComfort preset modes
 - Sensors: outdoor temperature, energy consumption, filter usage, WiFi RSSI
@@ -16,8 +20,8 @@ Local control of Samsung OCF air conditioners via DTLS/CoAP - no cloud, no Smart
 
 ## Requirements
 
-- Samsung OCF air conditioner (WindFree, AR series, etc.) paired with SmartThings
-- Client certificate with ACL access on the AC (see [Setup guide](#setup-guide))
+- Samsung OCF air conditioner (WindFree, AR series, etc.)
+- AC must have been paired with SmartThings at least once (this provisions the necessary ACL)
 - AC on the same local network as Home Assistant
 
 ## Installation
@@ -32,38 +36,32 @@ Local control of Samsung OCF air conditioners via DTLS/CoAP - no cloud, no Smart
 
 Copy `custom_components/samsung_ac_local` to your HA `config/custom_components/` directory.
 
-## Setup guide
-
-### Certificate preparation
-
-The AC accepts any self-signed certificate that contains a UUID matching its ACL. After normal SmartThings pairing, the Samsung cloud server UUID has full access:
-
-```bash
-openssl req -new -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
-    -keyout client_key.pem -out client_cert.pem -days 3650 -nodes \
-    -subj "/OU=uuid:ab0b0ac4-aae9-4958-a04d-8ec36fe1b2f9/CN=local"
-```
-
-Place the files in `/config/samsung_ac/` on your HA instance:
-
-- `/config/samsung_ac/client_cert.pem`
-- `/config/samsung_ac/client_key.pem`
-
-### Configuration
+## Configuration
 
 1. Go to Settings > Devices & Services > Add Integration
 2. Search for "Samsung AC Local"
-3. Enter the AC's IP address and certificate file paths
+3. Enter the AC's IP address
 4. The integration will test the connection during setup
+
+That's it. No certificate generation or file management needed.
 
 ### Options
 
 - **Polling interval** (default 30s): configurable via integration options after setup
 
+## How it works
+
+The integration uses a bundled certificate that authenticates as the Samsung cloud server UUID.
+Every Samsung OCF device trusts this UUID after SmartThings pairing. The AC does not verify
+certificate chains - it only checks the UUID against its access control list.
+
+After setup, the integration communicates directly with the AC over the local network.
+SmartThings cloud control continues to work in parallel.
+
 ## Supported models
 
-Tested on Samsung WindFree 2 (AR70F09C1AWNEU). Should work with any Samsung OCF air conditioner that uses DTLS/CoAP on port 49154 after SmartThings pairing.
+Tested on Samsung WindFree 2 (AR series). Should work with any Samsung OCF air conditioner that uses DTLS/CoAP on port 49154 after SmartThings pairing.
 
 ## Credits
 
-Built on reverse-engineering research of the Samsung OCF protocol, including BLE pairing flow capture, Frida hooking of SmartThings APK, and IoTivity protocol analysis.
+Built on reverse-engineering research of the Samsung OCF protocol, including BLE pairing flow capture and IoTivity protocol analysis.
