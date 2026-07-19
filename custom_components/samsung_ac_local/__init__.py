@@ -22,10 +22,11 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
     Platform.CLIMATE,
     Platform.SENSOR,
     Platform.SWITCH,
-    Platform.BINARY_SENSOR,
 ]
 
 

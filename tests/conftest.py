@@ -115,6 +115,7 @@ def mock_client(mock_status: ACStatus, mock_device_info: DeviceInfo) -> MagicMoc
     client.set_beep.return_value = True
     client.set_light.return_value = True
     client.set_auto_clean.return_value = True
+    client.set_auto_clean_action.return_value = True
     client.set_air_purify.return_value = True
     return client
 

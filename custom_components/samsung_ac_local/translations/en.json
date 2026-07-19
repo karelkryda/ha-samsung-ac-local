@@ -79,6 +79,14 @@
         "name": "Auto clean"
       }
     },
+    "button": {
+      "start_auto_clean": {
+        "name": "Start auto clean"
+      },
+      "stop_auto_clean": {
+        "name": "Stop auto clean"
+      }
+    },
     "binary_sensor": {
       "cloud_connected": {
         "name": "Cloud connected"

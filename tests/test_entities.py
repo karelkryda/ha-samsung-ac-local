@@ -6,6 +6,8 @@ platforms (climate, sensor, switch, binary_sensor).
 from unittest.mock import MagicMock, patch
 
 import pytest
+from homeassistant.components.button.const import DOMAIN as BUTTON_DOMAIN
+from homeassistant.components.button.const import SERVICE_PRESS
 from homeassistant.components.climate.const import (
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
@@ -32,6 +34,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.samsung_ac_local.const import (
     DOMAIN,
     AirPurifyMode,
+    AutoCleanAction,
     AutoCleanSetting,
     BeepVolume,
     ConvenientMode,
@@ -616,3 +619,41 @@ class TestBinarySensorsState:
         state = hass.states.get(entity_id)
         assert state is not None
         assert state.state == STATE_OFF
+
+
+class TestButtonCommands:
+    """Tests for button entity press actions."""
+
+    async def test_start_auto_clean(
+        self,
+        hass: HomeAssistant,
+        mock_client: MagicMock,
+        setup_integration: MockConfigEntry,
+    ) -> None:
+        """Pressing start auto clean calls set_auto_clean_action with START."""
+        _ = setup_integration
+        entity_id = _get_entity_id(hass, "button", f"{DEVICE_ID}_start_auto_clean")
+        await hass.services.async_call(
+            BUTTON_DOMAIN,
+            SERVICE_PRESS,
+            {ATTR_ENTITY_ID: entity_id},
+            blocking=True,
+        )
+        mock_client.set_auto_clean_action.assert_called_with(AutoCleanAction.START)
+
+    async def test_stop_auto_clean(
+        self,
+        hass: HomeAssistant,
+        mock_client: MagicMock,
+        setup_integration: MockConfigEntry,
+    ) -> None:
+        """Pressing stop auto clean calls set_auto_clean_action with STOP."""
+        _ = setup_integration
+        entity_id = _get_entity_id(hass, "button", f"{DEVICE_ID}_stop_auto_clean")
+        await hass.services.async_call(
+            BUTTON_DOMAIN,
+            SERVICE_PRESS,
+            {ATTR_ENTITY_ID: entity_id},
+            blocking=True,
+        )
+        mock_client.set_auto_clean_action.assert_called_with(AutoCleanAction.STOP)

@@ -13,6 +13,7 @@ Home Assistant custom integration for local control of Samsung OCF air condition
 - `sensor.py` - 12 sensors (energy, temps, filter, RSSI, timers, etc.)
 - `switch.py` - 4 switches (light, beep, air purify, auto clean).
 - `binary_sensor.py` - 5 binary sensors (cloud connected, outdoor unit, auto clean active, AI sleep, mute once).
+- `button.py` - 2 buttons (start/stop auto-clean cycle).
 - `config_flow.py` - Setup flow (host only) + options flow (poll interval).
 - `const.py` - All enums, resource paths, protocol constants.
 - `data.py` - Typed ConfigEntry runtime data.

@@ -17,6 +17,7 @@ Local control of Samsung OCF air conditioners via DTLS/CoAP - no cloud, no Smart
 - Sensors: outdoor temperature, energy consumption, filter usage, WiFi RSSI
 - Switches: display light, beep, air purify, auto-clean
 - Binary sensors: cloud connection status, auto-clean activity
+- Buttons: start/stop auto-clean cycle
 
 ## Requirements
 

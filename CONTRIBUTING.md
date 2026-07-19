@@ -21,15 +21,16 @@
 custom_components/samsung_ac_local/
   __init__.py         - Integration setup and teardown
   api.py              - DTLS/CoAP client (blocking, thread-safe)
+  binary_sensor.py    - Binary sensor entities
+  button.py           - Button entities
   cert.py             - Bundled client certificate (Samsung cloud UUID)
+  climate.py          - Climate entity
   config_flow.py      - UI configuration flow
   const.py            - Constants, enums, resource paths
   coordinator.py      - DataUpdateCoordinator for polling
   data.py             - Runtime data types
-  climate.py          - Climate entity
   sensor.py           - Sensor entities
   switch.py           - Switch entities
-  binary_sensor.py    - Binary sensor entities
   manifest.json       - Integration manifest
   translations/       - UI strings
 
@@ -38,7 +39,7 @@ tests/
   test_api.py         - CoAP client tests (protocol, parsing, connection)
   test_config_flow.py - Config flow tests
   test_coordinator.py - Coordinator tests
-  test_entities.py    - Entity tests (climate, sensor, switch, binary_sensor)
+  test_entities.py    - Entity tests (climate, sensor, switch, button, binary_sensor)
 ```
 
 ## Testing
