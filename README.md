@@ -5,7 +5,7 @@
 Local control of Samsung OCF air conditioners via DTLS/CoAP - no cloud, no SmartThings dependency after initial pairing.
 
 > [!IMPORTANT]
-> This is a personal project built for my own Samsung AC. I'm sharing it publicly in case it helps someone else, but please keep in mind that I can't guarantee it will work with your setup. I won't necessarily respond to issues or feature requests, and I only plan to extend the integration as far as my own needs go. You may not fork, redistribute, modify, or sell this software. See [LICENSE](LICENSE) for details. If it works for you - awesome! If not - you're on your own.
+> This is a personal project built for my own Samsung AC. I'm sharing it publicly in case it helps someone else, but please keep in mind that I can't guarantee it will work with your setup. I won't necessarily respond to issues or feature requests, and I only plan to extend the integration as far as my own needs go. See [LICENSE](LICENSE) for details. If it works for you - awesome! If not - you're on your own.
 
 ## Features
 
