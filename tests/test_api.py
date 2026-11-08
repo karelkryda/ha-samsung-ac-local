@@ -599,6 +599,53 @@ class TestStatusPolling:
         assert status.temperature_max == 30.0
         assert status.temperature_step == 1.0
 
+    def test_temperature_unit_fahrenheit(self) -> None:
+        """Reports Fahrenheit when the payload carries units=F."""
+        status = self._poll(
+            {
+                Resource.TEMPERATURE_CURRENT: {
+                    "temperature": "24.5",
+                    "units": "F",
+                },
+            }
+        )
+        assert status.temperature_unit == "F"
+
+    def test_temperature_unit_lowercase_normalized(self) -> None:
+        """Normalises lowercase unit values to upper-case."""
+        status = self._poll(
+            {
+                Resource.TEMPERATURE_CURRENT: {
+                    "temperature": "24.5",
+                    "units": "c",
+                },
+            }
+        )
+        assert status.temperature_unit == "C"
+
+    def test_temperature_unit_missing_is_none(self) -> None:
+        """Leaves temperature_unit as None when units is missing."""
+        status = self._poll(
+            {
+                Resource.TEMPERATURE_CURRENT: {
+                    "temperature": "24.5",
+                },
+            }
+        )
+        assert status.temperature_unit is None
+
+    def test_temperature_unit_invalid_is_none(self) -> None:
+        """Leaves temperature_unit as None when units is not C or F."""
+        status = self._poll(
+            {
+                Resource.TEMPERATURE_CURRENT: {
+                    "temperature": "24.5",
+                    "units": "K",
+                },
+            }
+        )
+        assert status.temperature_unit is None
+
     def test_fan_polling(self) -> None:
         """Fan mode is resolved from index."""
         status = self._poll(
@@ -805,8 +852,43 @@ class TestPostValidation:
         assert result is False
 
     def test_no_control_response_rejected(self) -> None:
-        """Rejects 2.04 without controlResponse."""
+        """Rejects 2.04 without controlResponse when no written key is echoed."""
         assert self._post("2.04", {"other": "data"}, {"power": "On"}) is False
+
+    def test_no_control_response_body_with_written_key_accepted(self) -> None:
+        """Accepts 2.04 whose plain body echoes a written key (US firmware)."""
+        # Body value may still be the old one: writes apply asynchronously.
+        assert self._post("2.04", {"power": "Off"}, {"power": "On"}) is True
+
+    def test_no_control_response_empty_body_rejected(self) -> None:
+        """Rejects 2.04 with an empty body and no controlResponse."""
+        assert self._post("2.04", {}, {"power": "On"}) is False
+
+    def test_no_control_response_wrong_code_rejected(self) -> None:
+        """Rejects a plain-body reply with a non-2.04 code."""
+        assert self._post("4.00", {"power": "On"}, {"power": "On"}) is False
+
+    def test_no_control_response_prefixed_written_bare_reply(self) -> None:
+        """Accepts when a prefixed written key is echoed bare in the reply."""
+        assert (
+            self._post(
+                "2.04",
+                {"modes": "WindFree"},
+                {SAMSUNG_PREFIX + "modes": "WindFree"},
+            )
+            is True
+        )
+
+    def test_no_control_response_bare_written_prefixed_reply(self) -> None:
+        """Accepts when a bare written key is echoed prefixed in the reply."""
+        assert (
+            self._post(
+                "2.04",
+                {SAMSUNG_PREFIX + "modes": "WindFree"},
+                {"modes": "WindFree"},
+            )
+            is True
+        )
 
     def test_none_data_rejected(self) -> None:
         """Rejects 2.04 with None payload."""

@@ -100,6 +100,9 @@ class ACStatus:
     temperature_max: float | None = None
     temperature_step: float | None = None
 
+    # Unit scale the AC reports temperatures in (OCF "units": C or F)
+    temperature_unit: str | None = None
+
     # Diagnostics
     rssi: int | None = None
 
@@ -778,6 +781,19 @@ class SamsungACClient:
 
         response = data.get("controlResponse") if isinstance(data, dict) else None
         if not response:
+            # ARA-WW (US) firmware answers a successful write with the plain
+            # updated resource, not the controlResponse envelope. Accept a
+            # 2.04 whose body carries at least one of the written keys; the
+            # values may still be the old ones because the unit applies
+            # writes asynchronously (~5 s).
+            if (
+                code == "2.04"
+                and isinstance(data, dict)
+                and data
+                and {_bare_key(key) for key in payload}
+                & {_bare_key(key) for key in data}
+            ):
+                return True
             LOGGER.warning("POST %s: no controlResponse in reply", resource.value)
             return False
 
@@ -812,6 +828,9 @@ class SamsungACClient:
         data = self._get(Resource.TEMPERATURE_CURRENT)
         if data:
             status.current_temperature = _to_float(data.get("temperature"))
+            units = data.get("units")
+            if isinstance(units, str) and units.upper() in ("C", "F"):
+                status.temperature_unit = units.upper()
             temp_range = data.get("range")
             if isinstance(temp_range, list):
                 range_min, range_max, *_ = *temp_range, None, None
@@ -969,6 +988,11 @@ def _noop_verify(
 def _samsung_val(data: dict, key: str) -> Any:
     """Look up a value by bare key or Samsung-prefixed key."""
     return data.get(key, data.get(f"{SAMSUNG_PREFIX}{key}"))
+
+
+def _bare_key(key: str) -> str:
+    """Strip a leading Samsung prefix from a resource key."""
+    return key.removeprefix(SAMSUNG_PREFIX)
 
 
 def _to_int(value: Any) -> int | None:

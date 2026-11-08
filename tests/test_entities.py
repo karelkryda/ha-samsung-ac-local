@@ -26,11 +26,13 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_OFF,
     STATE_ON,
+    UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.samsung_ac_local.api import ACStatus
 from custom_components.samsung_ac_local.const import (
     DOMAIN,
     AirPurifyMode,
@@ -179,6 +181,28 @@ class TestClimateState:
         assert state is not None
         assert state.attributes["min_temp"] == 16.0
         assert state.attributes["max_temp"] == 30.0
+
+    async def test_temperature_unit_fahrenheit(
+        self,
+        hass: HomeAssistant,
+        setup_integration: MockConfigEntry,
+    ) -> None:
+        """Climate entity reports Fahrenheit when the AC reports units=F."""
+        entry = setup_integration
+        status = ACStatus(
+            power=Power.ON,
+            hvac_mode=HvacMode.COOL,
+            current_temperature=24.0,
+            target_temperature=22.0,
+            temperature_unit="F",
+        )
+        entry.runtime_data.coordinator.async_set_updated_data(status)
+        await hass.async_block_till_done()
+
+        entity_id = _get_entity_id(hass, "climate", f"{DEVICE_ID}_climate")
+        entity = hass.data["climate"].get_entity(entity_id)
+        assert entity is not None
+        assert entity.temperature_unit == UnitOfTemperature.FAHRENHEIT
 
 
 class TestClimateCommands:
