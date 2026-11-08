@@ -3,6 +3,7 @@ Tests for Samsung AC Local entity
 platforms (climate, sensor, switch, binary_sensor).
 """
 
+from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -31,6 +32,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.samsung_ac_local.api import ACStatus
 from custom_components.samsung_ac_local.const import (
     DOMAIN,
     AirPurifyMode,
@@ -435,6 +437,35 @@ class TestSwitchesState:
         state = hass.states.get(entity_id)
         assert state is not None
         assert state.state == STATE_ON
+
+    async def test_light_switch_from_mode_options_token(
+        self,
+        hass: HomeAssistant,
+        mock_client: MagicMock,
+        mock_status: ACStatus,
+    ) -> None:
+        """Display-light switch reports the state parsed from the options token."""
+        # US firmware: the token Light_On means the panel is dark (light OFF).
+        mock_client.get_status.return_value = replace(
+            mock_status, light=LightMode.OFF, light_in_mode_options=True
+        )
+        with patch(
+            "custom_components.samsung_ac_local.SamsungACClient",
+        ) as mock_cls:
+            mock_cls.return_value = mock_client
+            entry = MockConfigEntry(
+                domain=DOMAIN,
+                data={"host": "192.168.1.100"},
+                version=2,
+            )
+            entry.add_to_hass(hass)
+            await hass.config_entries.async_setup(entry.entry_id)
+            await hass.async_block_till_done()
+
+        entity_id = _get_entity_id(hass, "switch", f"{DEVICE_ID}_light")
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == STATE_OFF
 
     async def test_beep_switch_on(
         self,

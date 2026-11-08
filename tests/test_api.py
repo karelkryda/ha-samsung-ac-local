@@ -496,6 +496,27 @@ class TestParseModeOptions:
         assert status.outdoor_temperature is None
         assert status.duration_on_minutes is None
 
+    def test_light_token_inverted_polarity(self) -> None:
+        """Light_On token means the panel is OFF (inverted polarity)."""
+        status = ACStatus()
+        _parse_mode_options(status, ["Light_On"])
+        assert status.light == LightMode.OFF
+        assert status.light_in_mode_options is True
+
+    def test_light_off_token_means_panel_lit(self) -> None:
+        """Light_Off token means the panel is ON."""
+        status = ACStatus()
+        _parse_mode_options(status, ["Light_Off"])
+        assert status.light == LightMode.ON
+        assert status.light_in_mode_options is True
+
+    def test_no_light_token_leaves_light_untouched(self) -> None:
+        """Options without a Light token leave light and the flag alone."""
+        status = ACStatus(light=LightMode.ON)
+        _parse_mode_options(status, ["Volume_100", "OutdoorTemp_77"])
+        assert status.light == LightMode.ON
+        assert status.light_in_mode_options is False
+
 
 class TestParseBeep:
     """Tests for _parse_beep volume extraction."""
@@ -743,6 +764,43 @@ class TestStatusPolling:
         )
         assert status.light == LightMode.OFF
 
+    def test_light_from_mode_options_skips_light_resource(self) -> None:
+        """When options carry the Light token, /light/vs/0 is not requested."""
+        client = SamsungACClient("192.168.1.100", FAKE_CERT, FAKE_KEY)
+        get_responses = {
+            Resource.MODE: {
+                "workingMode": "Cool",
+                f"{SAMSUNG_PREFIX}options": ["Volume_100", "Light_On"],
+            },
+            Resource.LIGHT: {"mode": "On"},  # stub response; must not be read
+        }
+        with patch.object(client, "_get", side_effect=get_responses.get) as mock_get:
+            status = client.get_status()
+
+        assert status.light == LightMode.OFF
+        assert status.light_in_mode_options is True
+        requested = [call.args[0] for call in mock_get.call_args_list]
+        assert Resource.MODE in requested
+        assert Resource.LIGHT not in requested
+
+    def test_light_polled_when_no_token_in_options(self) -> None:
+        """Without a Light token in options, /light/vs/0 is polled (upstream)."""
+        client = SamsungACClient("192.168.1.100", FAKE_CERT, FAKE_KEY)
+        get_responses = {
+            Resource.MODE: {
+                "workingMode": "Cool",
+                f"{SAMSUNG_PREFIX}options": ["Volume_100"],
+            },
+            Resource.LIGHT: {"mode": "Off"},
+        }
+        with patch.object(client, "_get", side_effect=get_responses.get) as mock_get:
+            status = client.get_status()
+
+        assert status.light == LightMode.OFF
+        assert status.light_in_mode_options is False
+        requested = [call.args[0] for call in mock_get.call_args_list]
+        assert Resource.LIGHT in requested
+
     def test_alarms_polling(self) -> None:
         """Alarms are populated from items list."""
         status = self._poll(
@@ -840,6 +898,65 @@ class TestPostValidation:
             side_effect=SamsungACRequestError("no response"),
         ):
             assert client._post(Resource.POWER, {"power": "On"}) is False
+
+
+class TestSetLight:
+    """Tests for set_light dual-path behaviour (mode options token vs resource)."""
+
+    def _client_after_poll(self, mode_options: list) -> SamsungACClient:
+        """Create a client and run get_status with the given mode options."""
+        client = SamsungACClient("192.168.1.100", FAKE_CERT, FAKE_KEY)
+        get_responses = {
+            Resource.MODE: {f"{SAMSUNG_PREFIX}options": mode_options},
+        }
+        with patch.object(client, "_get", side_effect=get_responses.get):
+            client.get_status()
+
+        return client
+
+    def test_token_seen_turn_on_posts_light_off_to_mode(self) -> None:
+        """Panel ON via token path posts inverted Light_Off to /mode/vs/0."""
+        client = self._client_after_poll(["Light_On"])
+        assert client._light_in_mode_options is True
+
+        with patch.object(client, "_post", return_value=True) as mock_post:
+            assert client.set_light(LightMode.ON) is True
+
+        mock_post.assert_called_once_with(
+            Resource.MODE, {f"{SAMSUNG_PREFIX}options": ["Light_Off"]}
+        )
+
+    def test_token_seen_turn_off_posts_light_on_to_mode(self) -> None:
+        """Panel OFF via token path posts inverted Light_On to /mode/vs/0."""
+        client = self._client_after_poll(["Volume_100", "Light_Off"])
+        assert client._light_in_mode_options is True
+
+        with patch.object(client, "_post", return_value=True) as mock_post:
+            assert client.set_light(LightMode.OFF) is True
+
+        mock_post.assert_called_once_with(
+            Resource.MODE, {f"{SAMSUNG_PREFIX}options": ["Light_On"]}
+        )
+
+    def test_no_token_seen_defaults_to_light_resource(self) -> None:
+        """Without a poll, set_light posts to /light/vs/0 as upstream."""
+        client = SamsungACClient("192.168.1.100", FAKE_CERT, FAKE_KEY)
+        assert client._light_in_mode_options is False
+
+        with patch.object(client, "_post", return_value=True) as mock_post:
+            assert client.set_light(LightMode.ON) is True
+
+        mock_post.assert_called_once_with(Resource.LIGHT, {"mode": "On"})
+
+    def test_poll_without_token_keeps_light_resource_path(self) -> None:
+        """A poll without a Light token keeps the upstream /light/vs/0 write."""
+        client = self._client_after_poll(["Volume_100"])
+        assert client._light_in_mode_options is False
+
+        with patch.object(client, "_post", return_value=True) as mock_post:
+            assert client.set_light(LightMode.OFF) is True
+
+        mock_post.assert_called_once_with(Resource.LIGHT, {"mode": "Off"})
 
 
 class TestConnectionManagement:

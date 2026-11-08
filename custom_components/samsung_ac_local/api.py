@@ -99,6 +99,11 @@ class ACStatus:
     temperature_min: float | None = None
     temperature_max: float | None = None
     temperature_step: float | None = None
+    # Display-panel light state was seen as a Light_ token in the mode
+    # options array (ARA-WW US firmware, where /light/vs/0 is a stateless
+    # stub). Implies status.light was parsed from the token with inverted
+    # polarity.
+    light_in_mode_options: bool = False
 
     # Diagnostics
     rssi: int | None = None
@@ -180,6 +185,10 @@ class SamsungACClient:
         self._mid: int = 0
         self._lock = threading.Lock()
 
+        # True when the last successful get_status saw the display-light
+        # token in the mode options array (US firmware path for set_light).
+        self._light_in_mode_options: bool = False
+
     @property
     def host(self) -> str:
         """Return the AC host address."""
@@ -235,6 +244,8 @@ class SamsungACClient:
         self._poll_ai_sleep(status)
         self._poll_mute_once(status)
         self._poll_cloud_connected(status)
+
+        self._light_in_mode_options = status.light_in_mode_options
 
         return status
 
@@ -388,13 +399,29 @@ class SamsungACClient:
         """
         Set the display panel light.
 
+        Two paths, chosen from the last successful get_status:
+
+        - Mode options token (ARA-WW US firmware, TP1X_DA-AC-RAC-01001_0000):
+          /light/vs/0 is a stateless echo stub there, so the light is a
+          single token in /mode/vs/0's options array with INVERTED polarity
+          - the token means "display-off mode active", so turning the panel
+          ON writes Light_Off and OFF writes Light_On. The write must carry
+          ONLY that token (a full options array is merged and the token
+          reverted); same single-token shape as set_beep.
+        - Dedicated resource (EU boards with the same version string honour
+          /light/vs/0): upstream behaviour is kept unchanged.
+
         Args:
-            mode: On or Off.
+            mode: On or Off (LightMode.ON = panel lit).
 
         Returns:
             True if the AC accepted the command.
 
         """
+        if self._light_in_mode_options:
+            token = "Light_Off" if mode == LightMode.ON else "Light_On"
+            return self._post(Resource.MODE, {f"{SAMSUNG_PREFIX}options": [token]})
+
         return self._post(Resource.LIGHT, {"mode": mode.value})
 
     def set_auto_clean(self, setting: AutoCleanSetting) -> bool:
@@ -860,6 +887,12 @@ class SamsungACClient:
                 status.humidity = int(val)
 
     def _poll_light(self, status: ACStatus) -> None:
+        # Mode options are polled first (see get_status); when they already
+        # carried the Light token, /light/vs/0 is a stateless stub (US
+        # firmware) and the token is the light's true state - skip the read.
+        if status.light_in_mode_options:
+            return
+
         data = self._get(Resource.LIGHT)
         if data:
             status.light = _parse_enum(LightMode, data.get("mode"))
@@ -1027,25 +1060,27 @@ def _parse_mode_options(status: ACStatus, options: list) -> None:
         if not sep:
             continue
 
-        if key == "OutdoorTemp":
+        if key == "OutdoorTemp" and (raw := _to_float(value)) is not None:
             # Samsung reports outdoor temp in Fahrenheit in the options array
-            raw = _to_float(value)
-            if raw is not None:
-                status.outdoor_temperature = round((raw - 32) * 5 / 9, 1)
+            status.outdoor_temperature = round((raw - 32) * 5 / 9, 1)
         elif key == "OutdoorConnection":
             status.outdoor_connected = value == "Connected"
         elif key == "DurationOn":
             status.duration_on_minutes = _to_int(value)
         elif key == "Sleep":
             status.sleep_timer_minutes = _to_int(value)
-        elif key == "AiTemp":
-            raw = _to_float(value)
-            if raw is not None:
-                status.ai_temperature = raw / 10.0
+        elif key == "AiTemp" and (raw := _to_float(value)) is not None:
+            status.ai_temperature = raw / 10.0
         elif key == "SmartCoolClean":
             status.freeze_wash_active = value == FreezeWashAction.START
         elif key == "ProgressSmartClean":
             status.freeze_wash_progress = _to_int(value)
+        elif key == "Light":
+            # Display-panel light on ARA-WW (US) firmware, with INVERTED
+            # polarity: the token means "display-off mode active", so
+            # Light_On = panel dark and Light_Off = panel lit.
+            status.light = LightMode.OFF if value == "On" else LightMode.ON
+            status.light_in_mode_options = True
 
 
 def _parse_beep(data: dict) -> BeepVolume | None:
