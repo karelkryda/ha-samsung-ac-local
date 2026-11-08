@@ -798,6 +798,12 @@ class SamsungACClient:
             return
 
         status.hvac_mode = _parse_enum(HvacMode, data.get("workingMode"))
+        if status.hvac_mode is None:
+            # Some firmwares omit workingMode and report the mode only in the
+            # one-element modes list (issue #43).
+            modes = _samsung_val(data, "modes")
+            if isinstance(modes, list) and modes:
+                status.hvac_mode = _parse_enum(HvacMode, modes[0])
         status.beep = _parse_beep(data)
         status.supported_modes = _parse_enum_list(
             HvacMode, _samsung_val(data, "supportedModes")

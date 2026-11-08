@@ -3,6 +3,7 @@ Tests for Samsung AC Local entity
 platforms (climate, sensor, switch, binary_sensor).
 """
 
+from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,11 +27,13 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_OFF,
     STATE_ON,
+    STATE_UNKNOWN,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.samsung_ac_local.api import ACStatus
 from custom_components.samsung_ac_local.const import (
     DOMAIN,
     AirPurifyMode,
@@ -94,6 +97,31 @@ class TestClimateState:
         state = hass.states.get(entity_id)
         assert state is not None
         assert state.state == HVACMode.COOL
+
+    async def test_power_on_unknown_mode_adds_entity(
+        self,
+        hass: HomeAssistant,
+        mock_client: MagicMock,
+        mock_status: ACStatus,
+    ) -> None:
+        """A powered-on unit with no HVAC mode is added, not crashed (issue #43)."""
+        mock_client.get_status.return_value = replace(mock_status, hvac_mode=None)
+        with patch(
+            "custom_components.samsung_ac_local.SamsungACClient",
+        ) as mock_cls:
+            mock_cls.return_value = mock_client
+            entry = MockConfigEntry(
+                domain=DOMAIN,
+                data={"host": "192.168.1.100"},
+                version=2,
+            )
+            entry.add_to_hass(hass)
+            await hass.config_entries.async_setup(entry.entry_id)
+            await hass.async_block_till_done()
+        entity_id = _get_entity_id(hass, "climate", f"{DEVICE_ID}_climate")
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == STATE_UNKNOWN
 
     async def test_target_temperature(
         self,

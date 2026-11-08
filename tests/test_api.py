@@ -573,6 +573,41 @@ class TestStatusPolling:
         assert status.outdoor_temperature == pytest.approx(30.0)
         assert status.duration_on_minutes == 30
 
+    def test_mode_polling_modes_list_fallback(self) -> None:
+        """HVAC mode falls back to the modes list when workingMode is missing."""
+        status = self._poll(
+            {
+                Resource.MODE: {
+                    f"{SAMSUNG_PREFIX}modes": ["Heat"],
+                    f"{SAMSUNG_PREFIX}options": [],
+                },
+            }
+        )
+        assert status.hvac_mode == HvacMode.HEAT
+
+    def test_mode_polling_working_mode_wins(self) -> None:
+        """WorkingMode key takes precedence over the modes list."""
+        status = self._poll(
+            {
+                Resource.MODE: {
+                    "workingMode": "Cool",
+                    f"{SAMSUNG_PREFIX}modes": ["Heat"],
+                },
+            }
+        )
+        assert status.hvac_mode == HvacMode.COOL
+
+    def test_mode_polling_empty_modes_list(self) -> None:
+        """An empty modes list yields no HVAC mode."""
+        status = self._poll(
+            {
+                Resource.MODE: {
+                    f"{SAMSUNG_PREFIX}modes": [],
+                },
+            }
+        )
+        assert status.hvac_mode is None
+
     def test_temperature_polling(self) -> None:
         """Current and target temperatures are populated."""
         status = self._poll(

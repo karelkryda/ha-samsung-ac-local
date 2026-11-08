@@ -126,6 +126,9 @@ class SamsungACClimateEntity(CoordinatorEntity[SamsungACCoordinator], ClimateEnt
             "model": data.device_info.model_id,
             "sw_version": data.device_info.firmware_version,
         }
+        # Default so the entity can be added when the mode is unknown (unit
+        # ON but neither workingMode nor a parseable modes list, issue #43).
+        self._attr_hvac_mode = None
         self._update_from_status(coordinator.data)
 
     @property
